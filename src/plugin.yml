@@ -1,0 +1,7 @@
+name: ProjectWinter_by_Marvin2k0
+author: Marvin2k0
+version: 1.0
+main: de.marvin2k0.projectwinter.ProjectWinter
+commands:
+  projectwinter:
+    aliases: [pw]
