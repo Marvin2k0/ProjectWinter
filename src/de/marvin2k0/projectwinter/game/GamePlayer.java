@@ -7,6 +7,7 @@ public class GamePlayer
 {
     private Game game;
     private Player player;
+    public boolean inLobby = true;
 
     public GamePlayer(Game game, Player player)
     {

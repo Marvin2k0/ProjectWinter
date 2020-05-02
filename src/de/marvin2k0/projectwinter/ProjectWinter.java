@@ -198,6 +198,22 @@ public class ProjectWinter extends JavaPlugin
             System.out.println("Changed " + amount + " blocks to air");
         }
 
+        else if (args[0].equalsIgnoreCase("setlobby") && player.hasPermission("pw.setlobby"))
+        {
+            if (args.length != 2)
+            {
+                player.sendMessage("§cUsage: /pw setlobby <game>");
+                return true;
+            }
+
+            String gameName = args[1];
+            Locations.setLocation(gameName + ".lobby", player.getLocation());
+
+            Game game = Game.getGame(gameName);
+            player.sendMessage(Text.get("setlobby").replace("%game%", game.getName()));
+            return true;
+        }
+
         else if (args[0].equalsIgnoreCase("setspawn") && player.hasPermission("pw.setspawn"))
         {
             if (args.length != 2)
@@ -232,6 +248,7 @@ public class ProjectWinter extends JavaPlugin
             }
         }
 
+        player.sendMessage("§cInvalid command!");
         return true;
     }
 
