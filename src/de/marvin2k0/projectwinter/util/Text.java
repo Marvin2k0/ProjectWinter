@@ -42,6 +42,9 @@ public class Text
         config.addDefault("alreadystarted", "&7Game has already started!");
         config.addDefault("traitor", "&7You are a &bTraitor&7! Your goal is to sabotage or kill your enemies");
         config.addDefault("toofar", "&7Don't go too far");
+        config.addDefault("coldmessage", "&7You are &bcold. &7Go somewhere warm!");
+        config.addDefault("fireused", "&7A fire has been used up!");
+        config.addDefault("freezing", "&7You have been in the cold for too long. &bGo somewhere warm now!");
 
         saveConfig();
     }

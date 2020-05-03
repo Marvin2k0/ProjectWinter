@@ -7,12 +7,14 @@ import de.marvin2k0.projectwinter.listener.*;
 import de.marvin2k0.projectwinter.util.Locations;
 import de.marvin2k0.projectwinter.util.Text;
 import org.bukkit.*;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -142,6 +144,8 @@ public class ProjectWinter extends JavaPlugin
                     {
                         Location l = new Location(loc.getWorld(), i, loc.getWorld().getHighestBlockYAt((int) i, (int) j), j);
                         loc.getWorld().getBlockAt(l).setType(Material.CHEST);
+                        Chest chest = (Chest) loc.getWorld().getBlockAt(l).getState();
+                        chest.getInventory().addItem(new ItemStack(Material.FIRE));
                         amount++;
                     }
                 }
