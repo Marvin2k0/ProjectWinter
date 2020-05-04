@@ -39,6 +39,11 @@ public class GamePlayer
         return game;
     }
 
+    public void setGame(Game game)
+    {
+        this.game  = game;
+    }
+
     public Player getPlayer()
     {
         return player;

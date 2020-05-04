@@ -52,6 +52,15 @@ public class ProjectWinter extends JavaPlugin
         getServer().getPluginManager().registerEvents(new ChatListener(), this);
 
         getCommand("projectwinter").setExecutor(this);
+        getCommand("setlobby").setExecutor(new LobbyCommand());
+        getCommand("lobby").setExecutor(new LobbyCommand());
+    }
+
+    @Override
+    public void onDisable()
+    {
+        for (Game game : Game.getGames())
+            game.reset();
     }
 
     private void addGames()
@@ -60,8 +69,11 @@ public class ProjectWinter extends JavaPlugin
 
         for (Map.Entry<String, Object> entry : section.entrySet())
         {
-            Game.getGame(entry.getKey());
-            System.out.println("added game " + entry.getKey());
+            if (!entry.getKey().equalsIgnoreCase("lobby") && getGameConfig().isSet(entry.getKey() + ".spawn"))
+            {
+                Game.getGame(entry.getKey());
+                System.out.println("added game " + entry.getKey());
+            }
         }
     }
 

@@ -57,7 +57,7 @@ public class CancelEvents implements Listener
         if (Game.dead.contains(damager))
         {
             event.setCancelled(true);
-            System.out.println("kann nicht schlagen");
+            return;
         }
 
         if (!Game.inGame(player))
@@ -95,15 +95,30 @@ public class CancelEvents implements Listener
             byte ambLight = loc.getBlock().getLightFromBlocks();
             double warmth = ambLight * 1.75 - skyLight;
 
-            if (warmth > 0)
+            if (warmth > 0 || hasItem(Material.FIRE, (byte) 0, 1, gp.getPlayer()))
             {
                 poison.remove(gp);
                 gp.getPlayer().removePotionEffect(PotionEffectType.POISON);
                 gp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 5, 2), false);
+
+                if (hasItem(Material.FIRE, (byte) 0, 1, gp.getPlayer()))
+                {
+                    removeItem(1, Material.FIRE, (byte) 0, gp.getPlayer());
+                    gp.getPlayer().sendMessage(Text.get("fireused"));
+
+                    if (cold1.contains(gp))
+                        cold1.remove(gp);
+
+                    if (cold2.contains(gp))
+                        cold2.remove(gp);
+
+                    if (cold3.contains(gp))
+                        cold3.remove(gp);
+                }
             }
         }
 
-        if (!coldTimer.contains(gp))
+        if (!coldTimer.contains(gp) && game.hasStarted)
         {
             coldTimer.add(gp);
 
@@ -161,20 +176,18 @@ public class CancelEvents implements Listener
                 {
                     cold1.remove(gp);
                     cold2.add(gp);
-                    System.out.println("now in 2");
                 }
                 else if (cold2.contains(gp))
                 {
                     cold2.remove(gp);
                     cold3.add(gp);
-                    System.out.println("now in 3");
                 }
                 else if (cold3.contains(gp))
                 {
                     cold3.remove(gp);
                     poison.add(gp);
                     gp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.POISON, 20*60, 1, false));
-                    gp.getPlayer().sendMessage(Text.get("freezing"));
+                    msg = Text.get("freezing");
                 }
                 else
                 {

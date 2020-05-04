@@ -7,9 +7,13 @@ import de.marvin2k0.projectwinter.util.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class Game
 {
@@ -22,6 +26,7 @@ public class Game
     private GamePlayer[] traitors;
 
     public boolean hasStarted;
+    public boolean win;
     private String name;
 
     public static Game getGame(String name)
@@ -41,6 +46,7 @@ public class Game
 
     public void startGame()
     {
+        hasStarted = true;
         setTraitors();
 
         for (GamePlayer gp : players)
@@ -49,10 +55,9 @@ public class Game
 
     public void start()
     {
-        hasStarted = true;
-
         CountdownTimer timer = new CountdownTimer(ProjectWinter.instance, 20,
-                () -> {},
+                () -> {
+                },
                 () -> startGame(),
                 (t) -> sendMessage(Text.get("countdown").replace("%timer%", t.getSecondsLeft() + ""))
         );
@@ -67,7 +72,7 @@ public class Game
 
         for (int i = 0; i < amount; i++)
         {
-            GamePlayer gp = players.get((int)(System.currentTimeMillis() % players.size()));
+            GamePlayer gp = players.get((int) (System.currentTimeMillis() % players.size()));
             traitors[i] = gp;
             gp.getPlayer().sendMessage(Text.get("traitor"));
         }
@@ -116,8 +121,19 @@ public class Game
 
     public void leave(GamePlayer gp)
     {
+        gp.setGame(null);
+
         if (players.contains(gp))
             players.remove(gp);
+
+        if (isTraitor(gp))
+        {
+            for (int i = 0; i < traitors.length; i++)
+            {
+                if (traitors[i] == gp)
+                    traitors[i] = null;
+            }
+        }
 
         if (ProjectWinter.gamePlayers.containsKey(gp.getPlayer()))
             ProjectWinter.gamePlayers.remove(gp.getPlayer());
@@ -125,14 +141,15 @@ public class Game
         Player player = gp.getPlayer();
         player.setAllowFlight(false);
         player.setFlying(false);
+        player.teleport(Locations.get("lobby"));
 
         for (Player p : Bukkit.getOnlinePlayers())
         {
             p.showPlayer(player);
-            System.out.println("set " + player.getName() + " visible for " + p.getName());
         }
 
-        System.out.println("player left");
+        if (!win)
+            checkWin("leave");
     }
 
     public void teleportToLobby(Player player)
@@ -159,7 +176,6 @@ public class Game
                 traitors[i] = null;
         }
 
-        players.remove(gp);
 
         for (GamePlayer g : players)
             g.getPlayer().hidePlayer(player);
@@ -167,13 +183,193 @@ public class Game
         player.setAllowFlight(true);
         player.setFlying(true);
         dead.add(player);
+        player.sendMessage("§7You died. Type §b/lobby §7to leave the game");
 
-        checkWin();
+        checkWin("die");
     }
 
-    public void checkWin()
+    private void setChests()
     {
-        //TODO
+        int radius = 50;
+
+        try
+        {
+            radius = Integer.valueOf(Text.get("mapsize", false));
+        }
+        catch (NumberFormatException e)
+        {
+        }
+
+        Location loc = Locations.get(getName() + ".spawn");
+        Random random = new Random();
+
+        double minX = loc.getX() - radius;
+        double maxX = loc.getX() + radius;
+        double minZ = loc.getZ() - radius;
+        double maxZ = loc.getZ() + radius;
+
+        int amount = 0;
+
+        for (double i = minX; i <= maxX; i++)
+        {
+            for (double j = minZ; j <= maxZ; j++)
+            {
+                if (random.nextInt(2000) <= 4)
+                {
+                    Location l = new Location(loc.getWorld(), i, loc.getWorld().getHighestBlockYAt((int) i, (int) j), j);
+                    loc.getWorld().getBlockAt(l).setType(Material.CHEST);
+                    Chest chest = (Chest) loc.getWorld().getBlockAt(l).getState();
+                    chest.getInventory().addItem(new ItemStack(Material.FIRE));
+                    amount++;
+                }
+            }
+        }
+
+        System.out.println("changed " + amount + " blocks to chest");
+    }
+
+    private void removeChests()
+    {
+        int radius = 50;
+
+        try
+        {
+            radius = Integer.valueOf(Text.get("mapsize", false));
+        }
+        catch (NumberFormatException e)
+        {
+        }
+
+        Location loc = Locations.get(getName() + ".spawn");
+
+        double minX = loc.getX() - radius;
+        double maxX = loc.getX() + radius;
+        double minZ = loc.getZ() - radius;
+        double maxZ = loc.getZ() + radius;
+
+        int amount = 0;
+
+        for (double i = minX; i <= maxX; i++)
+        {
+            for (double j = minZ; j <= maxZ; j++)
+            {
+                for (double x = 0; x <= 255; x++)
+                {
+                    Location l = new Location(loc.getWorld(), i, x, j);
+
+                    if (loc.getWorld().getBlockAt(l).getType() == Material.CHEST)
+                    {
+                        Chest chest = (Chest) loc.getWorld().getBlockAt(l).getState();
+                        chest.getInventory().clear();
+
+                        loc.getWorld().getBlockAt(l).setType(Material.AIR);
+                        amount++;
+                    }
+                }
+            }
+        }
+
+        System.out.println("Changed " + amount + " blocks to air");
+    }
+
+    public void reset()
+    {
+        hasStarted = false;
+        win = false;
+
+        removeChests();
+        setChests();
+
+        hasStarted = false;
+    }
+
+    public void checkWin(String str)
+    {
+        System.out.println(str);
+
+        try
+        {
+            if (checkTraitorWin() && hasStarted && !win)
+            {
+                win = true;
+
+                for (GamePlayer gp : players)
+                {
+                    gp.getPlayer().sendMessage(Text.get("traitorwin"));
+                    leave(gp);
+                }
+
+                for (Player player : dead)
+                {
+                    player.teleport(Locations.get("lobby"));
+                    player.sendMessage(Text.get("traitorwin"));
+                }
+            }
+            else if (checkGoodWin() && hasStarted && !win)
+            {
+                win = true;
+                System.out.println("die guten haben gewonnen");
+
+                for (GamePlayer gp : players)
+                {
+                    gp.getPlayer().sendMessage(Text.get("goodwin"));
+                    leave(gp);
+                }
+
+                for (Player player : dead)
+                {
+                    player.teleport(Locations.get("lobby"));
+                    player.sendMessage(Text.get("goodwin"));
+                }
+            }
+        }
+        catch (Exception e) {}
+
+        if (win)
+        {
+            reset();
+        }
+    }
+
+    public boolean checkTraitorWin()
+    {
+        System.out.println("check t win");
+        for (GamePlayer g : players)
+        {
+            if (!isTraitor(g))
+            {
+                System.out.println(g.getPlayer().getName() + " ist kein traitor");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean checkGoodWin()
+    {
+        System.out.println("check g win");
+        for (GamePlayer g : traitors)
+        {
+            if (g != null)
+            {
+                System.out.println(g.getPlayer().getName() + " ist nicht null");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public boolean isTraitor(GamePlayer gp)
+    {
+        for (int i = 0; i < traitors.length; i++)
+        {
+            if (traitors[i] == gp)
+                return true;
+        }
+
+        return false;
     }
 
     public Location getSpawn()

@@ -5,3 +5,6 @@ main: de.marvin2k0.projectwinter.ProjectWinter
 commands:
   projectwinter:
     aliases: [pw]
+  setlobby:
+    permission: pw.setlobby
+  lobby:

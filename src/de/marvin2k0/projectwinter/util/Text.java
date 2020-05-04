@@ -45,6 +45,8 @@ public class Text
         config.addDefault("coldmessage", "&7You are &bcold. &7Go somewhere warm!");
         config.addDefault("fireused", "&7A fire has been used up!");
         config.addDefault("freezing", "&7You have been in the cold for too long. &bGo somewhere warm now!");
+        config.addDefault("traitorwin", "&7The &btraitors won &7the game!");
+        config.addDefault("goodwin", "&7The &bgood players won &7the game!");
 
         saveConfig();
     }
