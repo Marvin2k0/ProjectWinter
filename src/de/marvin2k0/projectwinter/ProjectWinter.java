@@ -1,11 +1,11 @@
 package de.marvin2k0.projectwinter;
 
-import de.marvin2k0.projectwinter.biome.BiomeEdit;
 import de.marvin2k0.projectwinter.game.Game;
 import de.marvin2k0.projectwinter.game.GamePlayer;
 import de.marvin2k0.projectwinter.listener.*;
 import de.marvin2k0.projectwinter.util.Locations;
 import de.marvin2k0.projectwinter.util.Text;
+import net.minecraft.server.v1_7_R4.WorldGenerator;
 import org.bukkit.*;
 import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
@@ -45,7 +45,6 @@ public class ProjectWinter extends JavaPlugin
 
         Bukkit.getConsoleSender().sendMessage(Text.get("prefix"));
 
-        getServer().getPluginManager().registerEvents(new WeatherListener(), this);
         getServer().getPluginManager().registerEvents(new PlayerQuitListener(), this);
         getServer().getPluginManager().registerEvents(new SignListener(), this);
         getServer().getPluginManager().registerEvents(new CancelEvents(), this);
@@ -60,7 +59,10 @@ public class ProjectWinter extends JavaPlugin
     public void onDisable()
     {
         for (Game game : Game.getGames())
+        {
+            System.out.println("resetting for game " + game.getName());
             game.reset();
+        }
     }
 
     private void addGames()
@@ -94,32 +96,7 @@ public class ProjectWinter extends JavaPlugin
             return true;
         }
 
-        if (args[0].equalsIgnoreCase("create") && player.hasPermission("pw.create"))
-        {
-            World world = null;
-
-            if (Bukkit.getWorld("projectwinter") == null)
-            {
-                BiomeEdit.changeBiome("COLD_TAIGA");
-                WorldCreator worldCreator = new WorldCreator("projectwinter");
-                worldCreator.type(WorldType.LARGE_BIOMES);
-                player.sendMessage(Text.get("loading"));
-                world = worldCreator.createWorld();
-                world.setMonsterSpawnLimit(0);
-                world.setAnimalSpawnLimit(0);
-            }
-            else
-            {
-                world = Bukkit.getWorld("projectwinter");
-            }
-
-            Location loc = world.getHighestBlockAt(world.getSpawnLocation()).getLocation();
-            player.teleport(loc);
-            player.sendMessage(Text.get("welcome"));
-            return true;
-        }
-
-        else if (args[0].equalsIgnoreCase("loot") && player.hasPermission("pw.loot"))
+        if (args[0].equalsIgnoreCase("loot") && player.hasPermission("pw.loot"))
         {
             if (args.length != 2)
             {
@@ -170,48 +147,18 @@ public class ProjectWinter extends JavaPlugin
         {
             if (args.length != 2)
             {
-                player.sendMessage("§cUsage: /" + label + " <loot> <radius>");
+                player.sendMessage("§cUsage: /" + label + " reset <game>");
                 return true;
             }
 
-            int radius = 50;
 
-            try
-            {
-                radius = Integer.valueOf(args[1]);
-            }
-            catch (NumberFormatException e)
-            {
-                player.sendMessage(Text.get("nonum"));
-            }
+           if (!Game.exists(args[1]))
+           {
+               return true;
+           }
 
-            Location loc = player.getLocation();
-
-            double minX = loc.getX() - radius;
-            double maxX = loc.getX() + radius;
-            double minZ = loc.getZ() - radius;
-            double maxZ = loc.getZ() + radius;
-
-            int amount = 0;
-
-            for (double i = minX; i <= maxX; i++)
-            {
-                for (double j = minZ; j <= maxZ; j++)
-                {
-                    for (double x = 0; x <= 255; x++)
-                    {
-                        Location l = new Location(loc.getWorld(), i, x, j);
-
-                        if (loc.getWorld().getBlockAt(l).getType() == Material.CHEST)
-                        {
-                            loc.getWorld().getBlockAt(l).setType(Material.AIR);
-                            amount++;
-                        }
-                    }
-                }
-            }
-
-            System.out.println("Changed " + amount + " blocks to air");
+           Game game = Game.getGameFromName(args[1]);
+           game.reset();
         }
 
         else if (args[0].equalsIgnoreCase("setlobby") && player.hasPermission("pw.setlobby"))
@@ -262,6 +209,18 @@ public class ProjectWinter extends JavaPlugin
                 player.sendMessage(Text.get("notingame"));
                 return true;
             }
+        }
+
+        else if (args[0].equalsIgnoreCase("world"))
+        {
+            WorldCreator worldCreator = new WorldCreator("projectwinter");
+            World projectwinter = Bukkit.getWorld("projectwinter");
+            player.sendMessage(Text.get("loading"));
+            worldCreator.createWorld();
+
+            player.teleport(projectwinter.getSpawnLocation());
+            player.sendMessage(Text.get("welcome"));
+            return true;
         }
 
         player.sendMessage("§cInvalid command!");

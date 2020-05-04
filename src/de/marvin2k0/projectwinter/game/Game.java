@@ -4,10 +4,7 @@ import de.marvin2k0.projectwinter.ProjectWinter;
 import de.marvin2k0.projectwinter.util.CountdownTimer;
 import de.marvin2k0.projectwinter.util.Locations;
 import de.marvin2k0.projectwinter.util.Text;
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -23,7 +20,9 @@ public class Game
     private static int MIN_PLAYERS = 2;
 
     private ArrayList<GamePlayer> players = new ArrayList<>();
+    private ArrayList<Location> objectives = new ArrayList<>();
     private GamePlayer[] traitors;
+    private Random random;
 
     public boolean hasStarted;
     public boolean win;
@@ -55,6 +54,28 @@ public class Game
 
     public void start()
     {
+        for (int i = 0; i < 2; i++)
+        {
+            Location spawn = Locations.get(getName() + ".spawn");
+
+            int randX = random.nextInt(95);
+            int multX = ((random.nextInt(2) == 0) ? -1 : 1);
+            double x = spawn.getX() + randX * multX;
+            System.out.println("Rand x " + randX + " " + multX);
+
+            int randZ = random.nextInt(95);
+            int multZ = ((random.nextInt(2) == 0) ? -1 : 1);
+            double z = spawn.getZ() + randZ * multZ;
+            System.out.println("rand z " + randZ + " " + multZ);
+
+            double y = spawn.getWorld().getHighestBlockYAt((int) x, (int) z);
+
+            System.out.println("build obj at" + x + " " + y + " " + z);
+            Location loc = new Location(spawn.getWorld(), x, y, z);
+            objectives.add(loc);
+            buildObjective(loc);
+        }
+
         CountdownTimer timer = new CountdownTimer(ProjectWinter.instance, 20,
                 () -> {
                 },
@@ -121,8 +142,6 @@ public class Game
 
     public void leave(GamePlayer gp)
     {
-        gp.setGame(null);
-
         if (players.contains(gp))
             players.remove(gp);
 
@@ -186,6 +205,35 @@ public class Game
         player.sendMessage("§7You died. Type §b/lobby §7to leave the game");
 
         checkWin("die");
+    }
+
+    public void buildObjective(Location loc)
+    {
+        World world = loc.getWorld();
+        for (int i = 0; i < 5; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() - 2, loc.getZ() + j)).setType(Material.DIAMOND_BLOCK);
+
+                if (i == 2 && j == 2)
+                {
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() - 1, loc.getZ() + j)).setType(Material.GLOWSTONE);
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY(), loc.getZ() + j)).setType(Material.GLASS);
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() + 1, loc.getZ() + j)).setType(Material.CHEST);
+                    Chest chest = (Chest) world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() + 1, loc.getZ() + j)).getState();
+                    chest.getInventory().addItem(new ItemStack(Material.BEACON));
+                    continue;
+                }
+
+                world.getBlockAt(new Location(world, loc.getX() + i, loc.getY(), loc.getZ() + j)).setType(Material.COBBLESTONE);
+
+                if ((i == 0 && j == 0) || (i == 0 && j == 4) || (i == 4 && j == 0) || (i == 4 && j == 4))
+                {
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY(), loc.getZ() + j)).setType(Material.GLOWSTONE);
+                }
+            }
+        }
     }
 
     private void setChests()
@@ -272,6 +320,36 @@ public class Game
         System.out.println("Changed " + amount + " blocks to air");
     }
 
+    public void removeObjectives(Location loc)
+    {
+        System.out.println("removing");
+        World world = loc.getWorld();
+        for (int i = 0; i < 5; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() - 2, loc.getZ() + j)).setType(Material.AIR);
+
+                if (i == 2 && j == 2)
+                {
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() - 1, loc.getZ() + j)).setType(Material.AIR);
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY(), loc.getZ() + j)).setType(Material.AIR);
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() + 1, loc.getZ() + j)).setType(Material.AIR);
+                    continue;
+                }
+
+                if ((i == 0 && j == 0) || (i == 0 && j == 4) || (i == 4 && j == 0) || (i == 4 && j == 4))
+                {
+                    world.getBlockAt(new Location(world, loc.getX() + i, loc.getY() + 1, loc.getZ() + j)).setType(Material.AIR);
+                }
+
+                world.getBlockAt(new Location(world, loc.getX() + i, loc.getY(), loc.getZ() + j)).setType(Material.AIR);
+            }
+        }
+
+        System.out.println("removed obj at " + loc.getX() + " " + loc.getY() + " " + loc.getZ());
+    }
+
     public void reset()
     {
         hasStarted = false;
@@ -279,6 +357,11 @@ public class Game
 
         removeChests();
         setChests();
+
+        for (Location loc : objectives)
+            removeObjectives(loc);
+
+        objectives.clear();
 
         hasStarted = false;
     }
@@ -323,7 +406,9 @@ public class Game
                 }
             }
         }
-        catch (Exception e) {}
+        catch (Exception e)
+        {
+        }
 
         if (win)
         {
@@ -333,7 +418,6 @@ public class Game
 
     public boolean checkTraitorWin()
     {
-        System.out.println("check t win");
         for (GamePlayer g : players)
         {
             if (!isTraitor(g))
@@ -348,12 +432,10 @@ public class Game
 
     public boolean checkGoodWin()
     {
-        System.out.println("check g win");
         for (GamePlayer g : traitors)
         {
             if (g != null)
             {
-                System.out.println(g.getPlayer().getName() + " ist nicht null");
                 return false;
             }
         }
@@ -363,6 +445,9 @@ public class Game
 
     public boolean isTraitor(GamePlayer gp)
     {
+        if (traitors == null)
+            return false;
+
         for (int i = 0; i < traitors.length; i++)
         {
             if (traitors[i] == gp)
@@ -419,6 +504,8 @@ public class Game
 
     private Game(String name)
     {
+        random = new Random();
+
         this.hasStarted = false;
         this.name = name;
     }
